@@ -1,2 +1,2 @@
-fatload mmc 0:1 0x10000000 example-pi-zero
-bootelf 0x10000000
+fatload mmc 0:1 0x8000000 example-pi-zero
+bootelf 0x8000000

@@ -12,7 +12,7 @@ REV = $(shell git rev-parse --short HEAD 2> /dev/null)
 
 APP := example-pi-zero
 GOENV := GO_EXTLINK_ENABLED=0 CGO_ENABLED=0 GOOS=tamago GOARM=5 GOARCH=arm
-TEXT_START := 0x00010000 # ramStart (defined in imx6/imx6ul/memory.go) + 0x10000
+TEXT_START := 0x00010000 # Space for interrupt vector, etc
 
 GOFLAGS := -ldflags "-s -w -T $(TEXT_START) -E _rt0_arm_tamago -R 0x1000 -X 'main.Build=${BUILD}' -X 'main.Revision=${REV}'"
 
