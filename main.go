@@ -7,12 +7,87 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/f-secure-foundry/tamago/dma"
 	"github.com/f-secure-foundry/tamago/pi"
 	"github.com/f-secure-foundry/tamago/pi/pizero"
+	"github.com/f-secure-foundry/tamago/pi/videocore"
 )
+
+func videoCoreInfo() {
+	log.Println("-- VideoCore -------------------------------------------------------")
+
+	log.Printf("Firmware Rev: 0x%x", videocore.FirmwareRevision())
+	log.Printf("Board Model: 0x%x", videocore.BoardModel())
+	log.Printf("MAC Address: %v", hex.EncodeToString(videocore.MACAddress()))
+	log.Printf("Serial: 0x%x", videocore.Serial())
+
+	start, size := videocore.CPUMemory()
+	log.Printf("CPU Memory: 0x%x - 0x%x (%d MB)", start, start+size-1, size/(1024*1024))
+	start, size = videocore.GPUMemory()
+	log.Printf("GPU Memory: 0x%x - 0x%x (%d MB)", start, start+size-1, size/(1024*1024))
+
+	log.Printf("DMA Channels: 0x%x", videocore.DMAChannels())
+}
+
+func display() {
+	log.Println("-- Display -------------------------------------------------------")
+
+	data := videocore.FrameBuffer.EDID()
+	log.Printf("EDID data: %s", hex.EncodeToString(data))
+
+	width, height := videocore.FrameBuffer.PhysicalSize()
+	log.Printf("Physical Size: %d x %d pixels", width, height)
+
+	log.Printf("Changing to 1024x600")
+	videocore.FrameBuffer.SetPhysicalSize(1024, 600)
+}
+
+func dmaTest() {
+	log.Println("-- DMA -------------------------------------------------------------")
+
+	const dmasize = 1024 * 1024
+
+	bufHandle := videocore.AllocateMemory(1024*1024, 16, videocore.GPU_MEMORY_FLAG_DIRECT|videocore.GPU_MEMORY_FLAG_HINT_PERMALOCK)
+	dmaAddr := videocore.LockMemory(bufHandle)
+
+	log.Printf("Allocated 0x%x for DMA transfers", dmaAddr)
+
+	dma.Init(dmaAddr, dmasize)
+
+	pi.DMA.Init(dma.Default())
+	ch, err := pi.DMA.AllocChannel()
+	if err != nil {
+		log.Fatalf("failed to allocate DMA channel: %v", err)
+	}
+	log.Printf("Channel1 Debug: %s", ch.DebugInfo().String())
+	log.Printf("Channel1 Status: %s", ch.Status().String())
+
+	srcAddr, srcBuf := dma.Reserve(16, 64)
+	dstAddr, dstBuf := dma.Reserve(16, 64)
+	for i := 0; i < 16; i++ {
+		srcBuf[i] = byte(i & 0xff)
+		dstBuf[i] = 0xa0
+	}
+
+	log.Printf("DMA from 0x%x (%p) to 0x%x (%p)", srcAddr, srcBuf, dstAddr, dstBuf)
+
+	log.Printf("ChannelDebug: %s", ch.DebugInfo().String())
+	log.Printf("ChannelStatus: %s", ch.Status().String())
+	ch.CopyRAMToRAM(srcAddr, 6, dstAddr)
+	log.Printf("ChannelDebug: %s", ch.DebugInfo().String())
+	log.Printf("ChannelStatus: %s", ch.Status().String())
+
+	for i := 0; i < 10; i++ {
+		log.Printf("%d: 0x%x", i, dstBuf[i])
+	}
+}
 
 func main() {
 	log.Println("Hello World!")
+
+	videoCoreInfo()
+	display()
+	dmaTest()
 
 	log.Println("-- rng -------------------------------------------------------------")
 
