@@ -1,31 +1,25 @@
-# Tamago Hello World for Pi
+# Tamago Example for Pi Zero
+
+This is an example 'hello world' type application that runs on the Raspberry Pi Zero.  The example just flashes the on-board activity LED.  Connect a UART cable to see diagnostic output.
+
+## Prerequisites
+
+To use this example, you need:
+
+* A FAT-formatted micro-SD card with the Raspberry Pi bootloader present (`bootcode.bin`, `start.elf`, `fixup.dat`)
+
+## Build & install example
 
 ```sh
 export TAMAGO=~/work/tamago-go/bin/go
 export CROSS_COMPILE=arm-linux-gnueabi-
-make example
+export INSTALLDIR=/mnt/sdcard
+make install
 ```
 
-In U-Boot...
+The install target will perform these steps:
 
-## New
-
-boot.scr:
-
-```sh
-fatload mmc 0:1 0x10000000 example
-bootelf 0x10000000
-```
-
-To generate boot.scr.uimg: (`mkimage` is part of U-Boot)
-
-```sh
-mkimage -A arm -O linux -T script -C none -n boot.scr -d boot.scr boot.scr.uimg
-```
-
-(old)
-
-```sh
-fatload mmc 0:1 0x10000 example.bin
-go 0x64990
-```
+1. Compile the example using TAMAGO Go compiler
+2. Copy these files to the SD card:
+    * `config.txt`          (the Pi config to load the example as a 'kernel')
+    * `example-pi-zero.bin` (the example)

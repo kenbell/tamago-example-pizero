@@ -5,4 +5,6 @@
 enable_uart=1
 uart_2ndstage=1
 dtparam=uart0=on
-kernel=u-boot-pi0.bin
+kernel=example-pi-zero.bin
+kernel_address=0x8000
+disable_commandline_tags=1

@@ -27,9 +27,8 @@ all: $(APP)
 
 elf: $(APP)
 
-install: check_dest elf boot.scr.uimg
-	cp boot.scr.uimg $(INSTALLDIR)/boot.scr.uimg
-	cp $(APP) $(INSTALLDIR)/$(APP)
+install: check_dest $(APP).bin
+	cp $(APP).bin $(INSTALLDIR)/$(APP).bin
 	cp config.txt $(INSTALLDIR)/config.txt
 
 #### utilities ####
@@ -40,15 +39,9 @@ check_tamago:
 		exit 1; \
 	fi
 
-check_uboot:
-	@if [ "${MKIMAGE}" == "" ] || [ ! -f "${MKIMAGE}" ]; then \
-		echo 'You need to set the UBOOT variable to a compiled version of mkimage from https://www.denx.de/wiki/U-Boot'; \
-		exit 1; \
-	fi
-
 check_dest:
-	@if [ "${INSTALLDIR}" == "" ] || [ ! -f "${INSTALLDIR}/u-boot-pi0.bin" ]; then \
-		echo 'You need to set the INSTALLDIR variable to a mounted Raspberry Pi disk image with u-boot-pi0.bin'; \
+	@if [ "${INSTALLDIR}" == "" ] || [ ! -f "${INSTALLDIR}/bootcode.bin" ]; then \
+		echo 'You need to set the INSTALLDIR variable to a mounted Raspberry Pi disk image with bootcode.bin'; \
 		exit 1; \
 	fi
 
@@ -67,7 +60,10 @@ $(APP).bin: $(APP)
 	    -j .itablink -j .gopclntab -j .go.buildinfo -j .noptrdata -j .data \
 	    -j .bss --set-section-flags .bss=alloc,load,contents \
 	    -j .noptrbss --set-section-flags .noptrbss=alloc,load,contents\
-	    $(APP) -O binary $(APP).bin
-
-boot.scr.uimg: boot.scr check_uboot
-	$(MKIMAGE) -A arm -O linux -T script -C none -n boot.scr -d boot.scr boot.scr.uimg
+	    $(APP) -O binary $(APP).o
+	${CROSS_COMPILE}gcc -D ENTRY_POINT=`${CROSS_COMPILE}readelf -e example-pi-zero | grep Entry | sed 's/.*\(0x[a-zA-Z0-9]*\).*/\1/'` -c boot.S -o boot.o
+	${CROSS_COMPILE}objcopy boot.o -O binary stub.o
+	# Truncate pads the stub out to correctly align the binary
+	# 32768 = 0x10000 (TEXT_START) - 0x8000 (Default kernel load address)
+	truncate -s 32768 stub.o
+	cat stub.o $(APP).o > $(APP).bin
