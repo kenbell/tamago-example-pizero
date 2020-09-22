@@ -8,3 +8,4 @@ dtparam=uart0=on
 kernel=example-pi-zero.bin
 kernel_address=0x8000
 disable_commandline_tags=1
+core_freq=250
