@@ -9,6 +9,37 @@ import (
 	"github.com/f-secure-foundry/tamago/board/raspberrypi/pizero"
 )
 
+func rng() {
+	log.Println("-- rng -------------------------------------------------------------")
+
+	c := 10
+	b := make([]byte, c)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Printf("random bytes %s", hex.EncodeToString(b))
+
+	size := 32
+
+	for i := 0; i < 10; i++ {
+		rng := make([]byte, size)
+		rand.Read(rng)
+		log.Printf("%x", rng)
+	}
+
+	count := 1000
+	start := time.Now()
+
+	for i := 0; i < count; i++ {
+		rng := make([]byte, size)
+		rand.Read(rng)
+	}
+
+	log.Printf("retrieved %d random bytes in %s", size*count, time.Since(start))
+}
+
 /*
 func videoCoreInfo() {
 	log.Println("-- VideoCore -------------------------------------------------------")
@@ -86,34 +117,9 @@ func main() {
 		display()
 		dmaTest()
 	*/
-	log.Println("-- rng -------------------------------------------------------------")
 
-	c := 10
-	b := make([]byte, c)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
+	rng()
 
-	log.Printf("random bytes %s", hex.EncodeToString(b))
-
-	size := 32
-
-	for i := 0; i < 10; i++ {
-		rng := make([]byte, size)
-		rand.Read(rng)
-		log.Printf("%x", rng)
-	}
-
-	count := 1000
-	start := time.Now()
-
-	for i := 0; i < count; i++ {
-		rng := make([]byte, size)
-		rand.Read(rng)
-	}
-
-	log.Printf("retrieved %d random bytes in %s", size*count, time.Since(start))
 	/*
 		log.Println("-- timer -------------------------------------------------------------")
 
@@ -163,8 +169,6 @@ func main() {
 		ledOn = !ledOn
 		board.LED("activity", ledOn)
 	}
-
-	log.Println("-- DONE --------------------------------------------------------------")
 }
 
 func allocateAndWipe(count int) {
