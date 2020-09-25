@@ -4,8 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"log"
+	"runtime"
 	"time"
 
+	pi "github.com/f-secure-foundry/tamago/board/raspberrypi"
 	"github.com/f-secure-foundry/tamago/board/raspberrypi/pizero"
 )
 
@@ -40,34 +42,76 @@ func rng() {
 	log.Printf("retrieved %d random bytes in %s", size*count, time.Since(start))
 }
 
+func timer() {
+	log.Println("-- timer -------------------------------------------------------------")
+
+	t := time.NewTimer(time.Second)
+	log.Printf("waking up timer after %v", time.Second)
+
+	start := time.Now()
+
+	for now := range t.C {
+		log.Printf("woke up at %d (%v)", now.Nanosecond(), now.Sub(start))
+		break
+	}
+}
+
+func ram() {
+	log.Println("-- RAM ---------------------------------------------------------------")
+
+	// Check GC is working by forcing more total allocation than available
+	allocateAndWipe(400)
+	runtime.GC()
+	allocateAndWipe(400)
+}
+
+func watchdog() {
+	log.Println("-- watchdog ----------------------------------------------------------")
+
+	log.Println("Starting watchdog at 1s")
+
+	// Auto-reset after 1 sec
+	pi.Watchdog.Start(time.Second)
+	time.Sleep(600 * time.Millisecond)
+	log.Printf("Watchdog Remaining after 600ms: %v, resetting", pi.Watchdog.Remaining())
+
+	pi.Watchdog.Reset()
+	time.Sleep(600 * time.Millisecond)
+	log.Printf("Watchdog Remaining after 600ms: %v", pi.Watchdog.Remaining())
+
+	pi.Watchdog.Stop()
+	log.Print("Watchdog stopped, waiting for 2 sec")
+	time.Sleep(2 * time.Second)
+}
+
 /*
 func videoCoreInfo() {
 	log.Println("-- VideoCore -------------------------------------------------------")
 
-	log.Printf("Firmware Rev: 0x%x", videocore.FirmwareRevision())
-	log.Printf("Board Model: 0x%x", videocore.BoardModel())
-	log.Printf("MAC Address: %v", hex.EncodeToString(videocore.MACAddress()))
-	log.Printf("Serial: 0x%x", videocore.Serial())
+	log.Printf("Firmware Rev: 0x%x", bcm2835.FirmwareRevision())
+	log.Printf("Board Model: 0x%x", bcm2835.BoardModel())
+	log.Printf("MAC Address: %v", hex.EncodeToString(bcm2835.MACAddress()))
+	log.Printf("Serial: 0x%x", bcm2835.Serial())
 
-	start, size := videocore.CPUMemory()
+	start, size := bcm2835.CPUMemory()
 	log.Printf("CPU Memory: 0x%x - 0x%x (%d MB)", start, start+size-1, size/(1024*1024))
-	start, size = videocore.GPUMemory()
+	start, size = bcm2835.GPUMemory()
 	log.Printf("GPU Memory: 0x%x - 0x%x (%d MB)", start, start+size-1, size/(1024*1024))
 
-	log.Printf("DMA Channels: 0x%x", videocore.DMAChannels())
+	log.Printf("DMA Channels: 0x%x", bcm2835.DMAChannels())
 }
 
 func display() {
 	log.Println("-- Display -------------------------------------------------------")
 
-	data := videocore.FrameBuffer.EDID()
+	data := bcm2835.FrameBuffer.EDID()
 	log.Printf("EDID data: %s", hex.EncodeToString(data))
 
-	width, height := videocore.FrameBuffer.PhysicalSize()
+	width, height := bcm2835.FrameBuffer.PhysicalSize()
 	log.Printf("Physical Size: %d x %d pixels", width, height)
 
 	log.Printf("Changing to 1024x600")
-	videocore.FrameBuffer.SetPhysicalSize(1024, 600)
+	bcm2835.FrameBuffer.SetPhysicalSize(1024, 600)
 }
 
 func dmaTest() {
@@ -75,15 +119,15 @@ func dmaTest() {
 
 	const dmasize = 1024 * 1024
 
-	bufHandle := videocore.AllocateMemory(1024*1024, 16, videocore.GPU_MEMORY_FLAG_DIRECT|videocore.GPU_MEMORY_FLAG_HINT_PERMALOCK)
-	dmaAddr := videocore.LockMemory(bufHandle)
+	bufHandle := bcm2835.AllocateMemory(1024*1024, 16, bcm2835.GPU_MEMORY_FLAG_DIRECT|bcm2835.GPU_MEMORY_FLAG_HINT_PERMALOCK)
+	dmaAddr := bcm2835.LockMemory(bufHandle)
 
 	log.Printf("Allocated 0x%x for DMA transfers", dmaAddr)
 
 	dma.Init(dmaAddr, dmasize)
 
-	pi.DMA.Init(dma.Default())
-	ch, err := pi.DMA.AllocChannel()
+	bcm2835.DMA.Init(dma.Default())
+	ch, err := bcm2835.DMA.AllocChannel()
 	if err != nil {
 		log.Fatalf("failed to allocate DMA channel: %v", err)
 	}
@@ -112,51 +156,18 @@ func dmaTest() {
 */
 func main() {
 	log.Println("Hello World!")
+
+	rng()
+	timer()
+	ram()
+	watchdog()
+
 	/*
 		videoCoreInfo()
 		display()
 		dmaTest()
 	*/
 
-	rng()
-
-	/*
-		log.Println("-- timer -------------------------------------------------------------")
-
-		t := time.NewTimer(time.Second)
-		log.Printf("waking up timer after %v", time.Second)
-
-		start = time.Now()
-
-		for now := range t.C {
-			log.Printf("woke up at %d (%v)", now.Nanosecond(), now.Sub(start))
-			break
-		}
-
-		log.Println("-- RAM ---------------------------------------------------------------")
-
-		// Check GC is working by forcing more total allocation than available
-		allocateAndWipe(400)
-		runtime.GC()
-		allocateAndWipe(400)
-
-		log.Println("-- watchdog ----------------------------------------------------------")
-
-		log.Println("Starting watchdog at 1s")
-
-		// Auto-reset after 1 sec
-		pi.Watchdog.Start(time.Second)
-		time.Sleep(600 * time.Millisecond)
-		log.Printf("Watchdog Remaining after 600ms: %v, resetting", pi.Watchdog.Remaining())
-
-		pi.Watchdog.Reset()
-		time.Sleep(600 * time.Millisecond)
-		log.Printf("Watchdog Remaining after 600ms: %v", pi.Watchdog.Remaining())
-
-		pi.Watchdog.Stop()
-		log.Print("Watchdog stopped, waiting for 2 sec")
-		time.Sleep(2 * time.Second)
-	*/
 	log.Println("-- LED ---------------------------------------------------------------")
 
 	log.Println("Flashing the activity LED")
@@ -174,7 +185,7 @@ func main() {
 func allocateAndWipe(count int) {
 	log.Printf("allocating %dMB", count)
 
-	hold := make([][]byte, 0, 400)
+	hold := make([][]byte, 0, count)
 	for i := 0; i < cap(hold); i++ {
 		mem := make([]byte, 1024*1024)
 		if len(mem) == 0 {
