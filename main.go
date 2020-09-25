@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/f-secure-foundry/tamago/board/pi-foundation/pizero"
+	"github.com/f-secure-foundry/tamago/board/raspberrypi/pizero"
 )
 
 /*
