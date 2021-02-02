@@ -1,5 +1,5 @@
 module example
 
-go 1.14
+go 1.15
 
-require github.com/f-secure-foundry/tamago v0.0.0-20200722132626-ec12ad2f7ef7
+require github.com/f-secure-foundry/tamago v0.0.0-20210202085709-d372cf319eb8
