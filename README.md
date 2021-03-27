@@ -6,7 +6,16 @@ This is an example 'hello world' type application that runs on the Raspberry Pi 
 
 To use this example, you need:
 
-* A FAT-formatted micro-SD card with the Raspberry Pi bootloader present (`bootcode.bin`, `start.elf`, `fixup.dat`)
+* A FAT-formatted micro-SD card
+* A working `arm-linux-gnueabi` cross-compilation environment (unless using the dockerised build)
+
+## Dockerised build
+
+Assuming your SD card is at /mnt/sdcard:
+
+```bash
+docker run -v $(pwd):/workdir -v /mnt/sdcard:/workdir/build jphastings/tamago-build . example-pizero
+```
 
 ## Build & install example
 
